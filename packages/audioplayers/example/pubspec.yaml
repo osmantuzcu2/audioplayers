@@ -10,6 +10,8 @@ dependencies:
   path_provider: ^2.0.1
   path_provider_macos: ^2.0.0
   provider: 5.0.0
+  get: any
+  dio: any
 
 dev_dependencies:
   flame_lint: 0.1.0

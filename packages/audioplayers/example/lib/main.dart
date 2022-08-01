@@ -8,27 +8,20 @@ import 'package:audioplayers_example/tabs/sources.dart';
 import 'package:audioplayers_example/tabs/streams.dart';
 import 'package:flutter/material.dart';
 
+import 'tabs/controllers/jobController.dart';
+import 'tabs/playlist.dart';
+import 'package:get/get.dart';
+
 typedef OnError = void Function(Exception exception);
 
 void main() {
-  runApp(const MaterialApp(home: ExampleApp()));
+  runApp(MaterialApp(home: ExampleApp()));
 }
 
-class ExampleApp extends StatefulWidget {
-  const ExampleApp({Key? key}) : super(key: key);
-
-  @override
-  _ExampleAppState createState() => _ExampleAppState();
-}
-
-class _ExampleAppState extends State<ExampleApp> {
-  List<AudioPlayer> players = List.generate(4, (_) => AudioPlayer());
-  int selectedPlayerIdx = 0;
-
-  AudioPlayer get selectedPlayer => players[selectedPlayerIdx];
-
+class ExampleApp extends GetView<JobController> {
   @override
   Widget build(BuildContext context) {
+    Get.put(JobController());
     return Scaffold(
       appBar: AppBar(
         title: const Text('audioplayers example'),
@@ -40,8 +33,10 @@ class _ExampleAppState extends State<ExampleApp> {
             child: Center(
               child: Tgl(
                 options: const ['P1', 'P2', 'P3', 'P4'],
-                selected: selectedPlayerIdx,
-                onChange: (v) => setState(() => selectedPlayerIdx = v),
+                selected: controller.selectedPlayerIdx,
+                onChange: (v) {
+                  controller.selectedPlayerIdx = v;
+                },
               ),
             ),
           ),
@@ -49,24 +44,37 @@ class _ExampleAppState extends State<ExampleApp> {
             child: Tabs(
               tabs: [
                 TabData(
+                  key: 'playlistTab',
+                  label: 'Plist',
+                  content: Playlist(),
+                ),
+                TabData(
                   key: 'sourcesTab',
                   label: 'Src',
-                  content: SourcesTab(player: selectedPlayer),
+                  content: SourcesTab(
+                    player: controller.player,
+                  ),
                 ),
                 TabData(
                   key: 'controlsTab',
                   label: 'Ctrl',
-                  content: ControlsTab(player: selectedPlayer),
+                  content: ControlsTab(
+                    player: controller.player,
+                  ),
                 ),
                 TabData(
                   key: 'streamsTab',
                   label: 'Stream',
-                  content: StreamsTab(player: selectedPlayer),
+                  content: StreamsTab(
+                    player: controller.player,
+                  ),
                 ),
                 TabData(
                   key: 'audioContextTab',
                   label: 'Ctx',
-                  content: AudioContextTab(player: selectedPlayer),
+                  content: AudioContextTab(
+                    player: controller.player,
+                  ),
                 ),
                 TabData(
                   key: 'loggerTab',

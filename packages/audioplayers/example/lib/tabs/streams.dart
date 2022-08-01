@@ -61,50 +61,7 @@ class _StreamsTabState extends State<StreamsTab>
     super.build(context);
     return TabWrapper(
       children: [
-        Row(
-          children: [
-            Btn(
-              key: const Key('getDuration'),
-              txt: 'Get Duration',
-              onPressed: getDuration,
-            ),
-            const Pad(width: 8.0),
-            Text(
-              duration?.toString() ?? '-',
-              key: const Key('durationText'),
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            Btn(
-              key: const Key('getPosition'),
-              txt: 'Get Position',
-              onPressed: getPosition,
-            ),
-            const Pad(width: 8.0),
-            Text(
-              position?.toString() ?? '-',
-              key: const Key('positionText'),
-            ),
-          ],
-        ),
-        const Divider(color: Colors.black),
-        const Text('Streams'),
-        Text(
-          'Stream Duration: $streamDuration',
-          key: const Key('onDurationText'),
-        ),
-        Text(
-          'Stream Position: $streamPosition',
-          key: const Key('onPositionText'),
-        ),
-        Text(
-          'Stream State: $state',
-          key: const Key('onStateText'),
-        ),
-        const Divider(color: Colors.black),
-        PlayerWidget(player: widget.player),
+        PlayerWidget(),
       ],
     );
   }
