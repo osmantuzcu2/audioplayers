@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-class Tgl extends StatelessWidget {
+import '../tabs/controllers/jobController.dart';
+
+class Tgl extends GetView<JobController> {
   final List<String> options;
   final int selected;
   final void Function(int) onChange;
@@ -14,6 +17,7 @@ class Tgl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Get.put(JobController());
     return ToggleButtons(
       isSelected: options.asMap().keys.map((it) => it == selected).toList(),
       onPressed: onChange,

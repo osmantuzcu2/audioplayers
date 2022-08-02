@@ -7,6 +7,7 @@ import 'package:audioplayers_example/tabs/logger.dart';
 import 'package:audioplayers_example/tabs/sources.dart';
 import 'package:audioplayers_example/tabs/streams.dart';
 import 'package:flutter/material.dart';
+import 'package:get_storage/get_storage.dart';
 
 import 'tabs/controllers/jobController.dart';
 import 'tabs/playlist.dart';
@@ -14,8 +15,9 @@ import 'package:get/get.dart';
 
 typedef OnError = void Function(Exception exception);
 
-void main() {
-  runApp(MaterialApp(home: ExampleApp()));
+Future<void> main() async {
+  await GetStorage.init();
+  runApp(GetMaterialApp(home: ExampleApp()));
 }
 
 class ExampleApp extends GetView<JobController> {
@@ -23,23 +25,13 @@ class ExampleApp extends GetView<JobController> {
   Widget build(BuildContext context) {
     Get.put(JobController());
     return Scaffold(
-      appBar: AppBar(
+        /*   appBar: AppBar(
         title: const Text('audioplayers example'),
-      ),
-      body: Column(
+      ), */
+        body: StreamsTab(
+      player: controller.player,
+    ) /* Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Center(
-              child: Tgl(
-                options: const ['P1', 'P2', 'P3', 'P4'],
-                selected: controller.selectedPlayerIdx,
-                onChange: (v) {
-                  controller.selectedPlayerIdx = v;
-                },
-              ),
-            ),
-          ),
           Expanded(
             child: Tabs(
               tabs: [
@@ -86,6 +78,7 @@ class ExampleApp extends GetView<JobController> {
           ),
         ],
       ),
-    );
+     */
+        );
   }
 }

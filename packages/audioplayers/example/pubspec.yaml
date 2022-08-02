@@ -12,6 +12,8 @@ dependencies:
   provider: 5.0.0
   get: any
   dio: any
+  get_storage: any
+  lottie: ^1.4.0
 
 dev_dependencies:
   flame_lint: 0.1.0
