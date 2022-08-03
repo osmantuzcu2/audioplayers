@@ -29,16 +29,16 @@ class PlayerWidget extends StatelessWidget {
                               : Icon(Icons.wifi_off),
                         ),
                       ),
-                      InkWell(
-                        onTap: () {
-                          controller.onlineOffline();
+                      /* InkWell(
+                        onTap: () async {
+                          print(await controller.isUptoDate());
                         },
                         child: Container(
                           width: 50,
                           height: 50,
                           child: Icon(Icons.textsms_sharp),
                         ),
-                      ),
+                      ), */
                       controller.downloading
                           ? Container(
                               width: 50,
@@ -311,6 +311,35 @@ class PlayerWidget extends StatelessWidget {
                           controller.getselectedPlayerIdx),
                     ],
                   ),
+                  controller.online && !controller.connection
+                      ? Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Container(
+                            alignment: Alignment.center,
+                            height: 30,
+                            color: Colors.red[400],
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                context.width < 320
+                                    ? Text("")
+                                    : Text("İnternete bağlı gözükmüyor."),
+                                TextButton(
+                                  child: Text(
+                                    "OfflineModa Geç",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  onPressed: () {
+                                    //controller.onlineOffline();
+                                    //controller.update();
+                                    print(Get.width);
+                                  },
+                                )
+                              ],
+                            ),
+                          ),
+                        )
+                      : Container()
                 ],
               ),
             ));

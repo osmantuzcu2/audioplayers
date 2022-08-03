@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -17,7 +18,8 @@ import '../services/remote_services.dart';
 
 class JobController extends GetxController {
   final box = GetStorage();
-  List<SongModel> songs = [];
+  List<Datum> songs = [];
+  List<SongModel>? fullJson;
   bool isLoading = false;
   String? progressString;
   List<AudioPlayer> players = List.generate(2, (_) => AudioPlayer());
@@ -25,6 +27,8 @@ class JobController extends GetxController {
   bool online = true;
   bool neverShowDownloadAlert = false;
   bool downloading = false;
+  int? lastUpdate;
+  bool connection = true;
 
   int? selectedPlayerIdx;
   changePlayerIdx() {
@@ -65,19 +69,36 @@ class JobController extends GetxController {
       positions[selectedPlayerIdx ?? 0].toString().split('.').first;
   String get getselectedPlayerIdx => selectedPlayerIdx.toString();
 
+  ConnectivityResult _connectionStatus = ConnectivityResult.none;
+  final Connectivity _connectivity = Connectivity();
+  late StreamSubscription<ConnectivityResult> subscription;
+
   @override
   Future<void> onInit() async {
     super.onInit();
+    subscription = Connectivity()
+        .onConnectivityChanged
+        .listen((ConnectivityResult result) {
+      if (result == ConnectivityResult.none) {
+        connection = false;
+        update();
+      } else {
+        connection = true;
+        update();
+        print("connection established");
+      }
+      ;
+    });
     getSongs();
     selectedPlayerIdx = 0;
     _initStreams();
 
-    if (box.read("neverShowDownloadAlert") == true)
+    if (box.read("neverShowDownloadAlert"))
       neverShowDownloadAlert = true;
     else
       neverShowDownloadAlert = false;
-
-    //initDownloadableSong();
+    bool offlineMod = box.read("offlineMod") ?? false;
+    if (offlineMod && !await isUptoDate()) downloadAll();
   }
 
   @override
@@ -117,12 +138,12 @@ class JobController extends GetxController {
             only = true;
           }
           players[0].setVolume(fadeEffect(fark));
-          print(durations[0] - p);
+          //print(durations[0] - p);
         }
         if (p < Duration(seconds: 6)) {
           //volume inc
           players[0].setVolume(fadeEffect(p));
-          print(p);
+          //print(p);
         } else {
           players[0].setVolume(volume);
         }
@@ -136,7 +157,7 @@ class JobController extends GetxController {
 
       pss[0] = PlayerState.stopped;
       positions[0] = durations[0];
-      print("bitti");
+      //print("bitti");
     });
 
     _durationSubscription2 = players[1].onDurationChanged.listen((d) {
@@ -154,12 +175,12 @@ class JobController extends GetxController {
             only = true;
           }
           players[1].setVolume(fadeEffect(fark));
-          print(durations[1] - p);
+          //print(durations[1] - p);
         }
         if (p < Duration(seconds: 6)) {
           //volume inc
           players[1].setVolume(fadeEffect(p));
-          print(p);
+          //print(p);
         } else {
           players[1].setVolume(volume);
         }
@@ -173,7 +194,7 @@ class JobController extends GetxController {
 
       pss[1] = PlayerState.stopped;
       positions[1] = durations[1];
-      print("ends");
+      //print("ends");
     });
   }
 
@@ -187,10 +208,10 @@ class JobController extends GetxController {
       await player.setSource(UrlSource(songs[ret].music));
     else {
       var directory = await getApplicationDocumentsDirectory();
-      print(directory.path + "\\.arsiv\\" + songs[ret].music);
+      //print(directory.path + "\\.arsiv\\" + songs[ret].music);
 
       await player.setSourceDeviceFile(
-          directory.path + "\\.arsiv\\" + songs[ret].music);
+          directory.path + "\\.arsiv\\" + songs[ret].name + ".mp3");
     }
 
     playingSongsId = ret;
@@ -282,11 +303,13 @@ class JobController extends GetxController {
       dirContents(Directory(directory.path + '/.arsiv/'));
 
       var result = await RemoteServices.getSongs();
-      print(result);
+      //print(result);
       if (result != null && result != 'null' && result != '[]') {
-        songs = songModelFromJson(result);
+        songs = songModelFromJson(result).first.data;
+        lastUpdate = songModelFromJson(result).first.lastUpdate;
+        fullJson = songModelFromJson(result);
         for (var item in songs) {
-          print(item.name);
+          // print(item.name);
 
           //  Download(item.name, item.music);
         }
@@ -327,9 +350,8 @@ class JobController extends GetxController {
             )
           ]);
     } else {
-      print("var");
-      print("box neverShowDownloadAlert " +
-          box.read("neverShowDownloadAlert").toString());
+      // print("var");
+      // print("box neverShowDownloadAlert " + box.read("neverShowDownloadAlert").toString());
     }
   }
 
@@ -370,8 +392,8 @@ class JobController extends GetxController {
     var lister = dir.list(recursive: false);
     lister.listen((file) {
       files.add(file);
-      print(file);
-      print(file.path);
+      //print(file);
+      //print(file.path);
     },
         // should also register onError
 
@@ -384,11 +406,12 @@ class JobController extends GetxController {
   onlineOffline() async {
     if (online == true) {
       if (await anyOfflineSong() == true) {
+        box.write("offlineMod", true);
         //json dosyasından oku
         var directory = await getApplicationDocumentsDirectory();
         File file = File(await directory.path + "/.arsiv/list.json");
         if (file.existsSync()) {
-          songs = songModelFromJson(file.readAsStringSync());
+          songs = songModelFromJson(file.readAsStringSync()).first.data;
           online = false;
           update();
         } else
@@ -432,6 +455,7 @@ class JobController extends GetxController {
       }
     } else {
       online = true;
+      update();
     }
   }
 
@@ -450,16 +474,14 @@ class JobController extends GetxController {
 
   downloadAll() async {
     downloading = true;
-    for (var song in songs) {
+    /*  for (var song in songs) {
       await download(song.name, song.music);
-    }
+    } */
     //json dosyasına yaz
     var directory = await getApplicationDocumentsDirectory();
     File file = File(await directory.path + "/.arsiv/list.json"); // 1
-    for (var song in songs) {
-      song.music = song.name + ".mp3";
-    }
-    file.writeAsStringSync(jsonEncode(songs)); // 2
+    await getSongs();
+    file.writeAsStringSync(jsonEncode(fullJson)); // 2
 
     downloading = false;
   }
@@ -468,18 +490,33 @@ class JobController extends GetxController {
     var directory = await getApplicationDocumentsDirectory();
     Dio dio = Dio();
     try {
-      print(downloadurl);
-      print(directory.path);
+      //print(downloadurl);
+      //print(directory.path);
       await dio.download(downloadurl, "${directory.path}/.arsiv/$title.mp3",
           onReceiveProgress: (rec, total) {
-        print("Rec: $rec, Total:$total");
+        //print("Rec: $rec, Total:$total");
         progressString = ((rec / total) * 100).toStringAsFixed(0) + "%";
-        print(progressString);
+        //print(progressString);
         update();
       });
     } catch (e) {
-      print(e);
+      //print(e);
 //Catch your error here
     }
+  }
+
+  Future<bool> isUptoDate() async {
+    var directory = await getApplicationDocumentsDirectory();
+    File file = File(await directory.path + "/.arsiv/list.json");
+    if (file.existsSync()) {
+      await getSongs();
+      int lastUpdateInFile =
+          songModelFromJson(file.readAsStringSync()).first.lastUpdate;
+      if (lastUpdate == lastUpdateInFile)
+        return true;
+      else
+        return false;
+    } else
+      return false;
   }
 }
