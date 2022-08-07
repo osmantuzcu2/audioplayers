@@ -1,9 +1,9 @@
 import 'package:audioplayers/audioplayers.dart';
-import 'package:audioplayers_example/components/btn.dart';
-import 'package:audioplayers_example/components/tab_wrapper.dart';
-import 'package:audioplayers_example/components/tgl.dart';
-import 'package:audioplayers_example/components/txt.dart';
-import 'package:audioplayers_example/utils.dart';
+import 'package:cloud_media/components/btn.dart';
+import 'package:cloud_media/components/tab_wrapper.dart';
+import 'package:cloud_media/components/tgl.dart';
+import 'package:cloud_media/components/txt.dart';
+import 'package:cloud_media/utils.dart';
 import 'package:flutter/material.dart';
 
 class ControlsTab extends StatefulWidget {

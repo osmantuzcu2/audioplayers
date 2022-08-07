@@ -1,6 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
-import 'package:audioplayers_example/components/btn.dart';
-import 'package:audioplayers_example/components/tab_wrapper.dart';
+import 'package:cloud_media/components/btn.dart';
+import 'package:cloud_media/components/tab_wrapper.dart';
 import 'package:flutter/material.dart';
 
 class LoggerTab extends StatefulWidget {

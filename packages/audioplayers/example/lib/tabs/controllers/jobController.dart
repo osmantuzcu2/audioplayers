@@ -10,6 +10,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../models/campaignModel.dart';
 import '../models/songModel.dart';
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
@@ -17,18 +18,31 @@ import 'package:path_provider/path_provider.dart';
 import '../services/remote_services.dart';
 
 class JobController extends GetxController {
+  String songsUrl = 'https://novemyazilim.com/music-app.php';
+  String campaignsUrl = 'https://novemyazilim.com/music-app-campaings1.php';
+  String campaignsUrlTimed =
+      'https://novemyazilim.com/music-app-campaings1.php?timed=true';
+
   final box = GetStorage();
   List<Datum> songs = [];
   List<SongModel>? fullJson;
+  int? lastUpdate;
+  List<CampData> campaigns = [];
+  List<CampaignModel>? fullCampaignJson;
+  int? campLastUpdate;
+  List<CampData> timedCampaigns = [];
+  List<CampaignModel>? fullTimedCampaignJson;
+  int? campTimedLastUpdate;
+
   bool isLoading = false;
   String? progressString;
-  List<AudioPlayer> players = List.generate(2, (_) => AudioPlayer());
+  List<AudioPlayer> players = List.generate(3, (_) => AudioPlayer());
   double volume = 1.0;
   bool online = true;
   bool neverShowDownloadAlert = false;
   bool downloading = false;
-  int? lastUpdate;
   bool connection = true;
+  String downloadText = '';
 
   int? selectedPlayerIdx;
   changePlayerIdx() {
@@ -45,10 +59,14 @@ class JobController extends GetxController {
 
   // player states
 
-  List<Duration> durations = [Duration(), Duration()];
-  List<Duration> positions = [Duration(), Duration()];
+  List<Duration> durations = [Duration(), Duration(), Duration()];
+  List<Duration> positions = [Duration(), Duration(), Duration()];
 
-  List<PlayerState> pss = [PlayerState.stopped, PlayerState.stopped];
+  List<PlayerState> pss = [
+    PlayerState.stopped,
+    PlayerState.stopped,
+    PlayerState.stopped
+  ];
 
   StreamSubscription? _durationSubscription;
   StreamSubscription? _positionSubscription;
@@ -59,7 +77,10 @@ class JobController extends GetxController {
   StreamSubscription? _positionSubscription2;
   StreamSubscription? _playerCompleteSubscription2;
   StreamSubscription? _playerStateChangeSubscription2;
+
+  StreamSubscription? _playerCompleteSubscription3;
   int playingSongsId = 0;
+  int counter = 1;
 
   bool isPlaying() => pss[selectedPlayerIdx ?? 0] == PlayerState.playing;
   bool isPaused() => pss[selectedPlayerIdx ?? 0] == PlayerState.paused;
@@ -69,13 +90,12 @@ class JobController extends GetxController {
       positions[selectedPlayerIdx ?? 0].toString().split('.').first;
   String get getselectedPlayerIdx => selectedPlayerIdx.toString();
 
-  ConnectivityResult _connectionStatus = ConnectivityResult.none;
-  final Connectivity _connectivity = Connectivity();
   late StreamSubscription<ConnectivityResult> subscription;
 
   @override
   Future<void> onInit() async {
     super.onInit();
+    await dirCreate();
     subscription = Connectivity()
         .onConnectivityChanged
         .listen((ConnectivityResult result) {
@@ -90,6 +110,8 @@ class JobController extends GetxController {
       ;
     });
     getSongs();
+    getXCampaigns();
+    getTimedCampaigns();
     selectedPlayerIdx = 0;
     _initStreams();
 
@@ -98,7 +120,8 @@ class JobController extends GetxController {
     else
       neverShowDownloadAlert = false;
     bool offlineMod = box.read("offlineMod") ?? false;
-    if (offlineMod && !await isUptoDate()) downloadAll();
+    //offline mod açık ve liste güncel değilse
+    if (offlineMod && !await isUptoDate()) downloadAll(false);
   }
 
   @override
@@ -196,6 +219,11 @@ class JobController extends GetxController {
       positions[1] = durations[1];
       //print("ends");
     });
+    _playerCompleteSubscription3 = players[2].onPlayerComplete.listen((event) {
+      players[2].stop();
+      next();
+      //print("ends");
+    });
   }
 
   Future<void> randomMusic() async {
@@ -242,6 +270,8 @@ class JobController extends GetxController {
   }
 
   Future<void> play() async {
+    isLoading = true;
+    update();
     if (!isPaused()) randomMusic();
     final _position = positions[selectedPlayerIdx!];
     if (_position.inMilliseconds > 0) {
@@ -249,6 +279,22 @@ class JobController extends GetxController {
     }
     await player.resume();
     pss[selectedPlayerIdx!] = PlayerState.playing;
+
+    isLoading = false;
+    update();
+  }
+
+  Future<int> isCampShouldPlay() async {
+    int ret = -1;
+    for (var i = 0; i < campaigns.length; i++) {
+      if (counter.remainder(campaigns[i].playAfterXSongs + 1) == 0 &&
+          counter != 0) {
+        ret = i;
+
+        break;
+      }
+    }
+    return ret;
   }
 
   Future<void> next() async {
@@ -256,12 +302,25 @@ class JobController extends GetxController {
       selectedPlayerIdx == 0 ? stopOnly(1) : stopOnly(0);
       only = false;
     });
-    changePlayerIdx();
-    randomMusic();
-    await player.seek(Duration(milliseconds: 0));
+    if (await isCampShouldPlay() != -1) {
+      int i = await isCampShouldPlay();
+      selectedPlayerIdx = 2;
+      update();
+      await player.setSource(UrlSource(campaigns[i].file));
+      await player.seek(Duration(milliseconds: 0));
+      await player.resume();
+      print('reklam çalınıyor');
+    } else {
+      changePlayerIdx();
+      randomMusic();
+      await player.seek(Duration(milliseconds: 0));
 
-    await player.resume();
-    pss[selectedPlayerIdx!] = PlayerState.playing;
+      await player.resume();
+      pss[selectedPlayerIdx!] = PlayerState.playing;
+      print("reklam yok.");
+    }
+    counter++;
+    print("counter= " + counter.toString());
   }
 
   Future<void> pause() async {
@@ -299,10 +358,8 @@ class JobController extends GetxController {
   Future<void> getSongs() async {
     try {
       isLoading = true;
-      var directory = await getApplicationDocumentsDirectory();
-      dirContents(Directory(directory.path + '/.arsiv/'));
 
-      var result = await RemoteServices.getSongs();
+      var result = await RemoteServices.getSongs(songsUrl);
       //print(result);
       if (result != null && result != 'null' && result != '[]') {
         songs = songModelFromJson(result).first.data;
@@ -311,6 +368,70 @@ class JobController extends GetxController {
         for (var item in songs) {
           // print(item.name);
 
+          //  Download(item.name, item.music);
+        }
+        // print(songs[0].name + songs[0].music);
+        update();
+      } else {
+        //   Get.snackbar('Uyarı', 'Hareket bulunamadı');
+      }
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  Future<void> getXCampaigns() async {
+    try {
+      isLoading = true;
+
+      var result = await RemoteServices.getSongs(campaignsUrl);
+      //print(result);
+      if (result != null && result != 'null' && result != '[]') {
+        campaigns = campaignModelFromJson(result).first.data;
+        campLastUpdate = campaignModelFromJson(result).first.lastUpdate;
+        fullCampaignJson = campaignModelFromJson(result);
+        for (var item in campaigns) {
+          print(item.file);
+
+          //  Download(item.name, item.music);
+        }
+        // print(songs[0].name + songs[0].music);
+        update();
+      } else {
+        //   Get.snackbar('Uyarı', 'Hareket bulunamadı');
+      }
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  Future<void> getTimedCampaigns() async {
+    try {
+      isLoading = true;
+
+      var result = await RemoteServices.getSongs(campaignsUrlTimed);
+      //print(result);
+      if (result != null && result != 'null' && result != '[]') {
+        timedCampaigns = campaignModelFromJson(result).first.data;
+        campTimedLastUpdate = campaignModelFromJson(result).first.lastUpdate;
+        fullTimedCampaignJson = campaignModelFromJson(result);
+        for (var item in timedCampaigns) {
+          print(item.file);
+          Timer(
+              DateTime(
+                      DateTime.now().year,
+                      DateTime.now().month,
+                      DateTime.now().day,
+                      int.parse(item.playAtTheTime.split(":").first),
+                      int.parse(item.playAtTheTime.split(":").last))
+                  .difference(DateTime.now()), () async {
+            print("Zamanlanmış reklam çalınıyor");
+            selectedPlayerIdx = 2;
+            update();
+            await player.setSource(UrlSource(item.file));
+            await player.seek(Duration(milliseconds: 0));
+            await player.resume();
+          });
           //  Download(item.name, item.music);
         }
         // print(songs[0].name + songs[0].music);
@@ -363,7 +484,7 @@ class JobController extends GetxController {
           TextButton(
             child: Text("Arkaplanda indir"),
             onPressed: () {
-              downloadAll();
+              downloadAll(true);
               Get.back();
             },
           ),
@@ -422,7 +543,7 @@ class JobController extends GetxController {
                 TextButton(
                   child: Text("Arkaplanda indir"),
                   onPressed: () {
-                    downloadAll();
+                    downloadAll(true);
                     Get.back();
                   },
                 ),
@@ -441,7 +562,7 @@ class JobController extends GetxController {
               TextButton(
                 child: Text("Arkaplanda indir"),
                 onPressed: () {
-                  downloadAll();
+                  downloadAll(true);
                   Get.back();
                 },
               ),
@@ -472,14 +593,42 @@ class JobController extends GetxController {
       return false;
   }
 
-  downloadAll() async {
+  downloadAll(bool first) async {
     downloading = true;
-    /*  for (var song in songs) {
-      await download(song.name, song.music);
-    } */
-    //json dosyasına yaz
     var directory = await getApplicationDocumentsDirectory();
     File file = File(await directory.path + "/.arsiv/list.json"); // 1
+    File file2 = File(await directory.path + "/.arsiv/online.json"); // 1
+    if (first == true)
+      for (var song in songs) {
+        await download(song.name, song.music);
+      }
+    else {
+      List<Datum> offlineSongs =
+          songModelFromJson(file.readAsStringSync()).first.data;
+
+      for (var i = 0; i < songs.length; i++) {
+        if (offlineSongs.where((element) => songs[i].id == element.id).length <
+            1) {
+          print("indirilecek " + songs[i].name);
+          await download(songs[i].name, songs[i].music);
+        }
+      }
+      for (var i = 0; i < offlineSongs.length; i++) {
+        if (songs.where((element) => offlineSongs[i].id == element.id).length <
+            1) {
+          print("silinecek " + offlineSongs[i].name);
+          File delFile = File(await directory.path +
+              "/.arsiv/" +
+              offlineSongs[i].name +
+              ".mp3");
+          delFile.delete();
+        }
+      }
+      //indirilmiş müzikler varsa sadece değişenleri indir eskileri sil
+
+    }
+    //json dosyasına yaz
+
     await getSongs();
     file.writeAsStringSync(jsonEncode(fullJson)); // 2
 
@@ -496,6 +645,7 @@ class JobController extends GetxController {
           onReceiveProgress: (rec, total) {
         //print("Rec: $rec, Total:$total");
         progressString = ((rec / total) * 100).toStringAsFixed(0) + "%";
+
         //print(progressString);
         update();
       });
@@ -503,6 +653,8 @@ class JobController extends GetxController {
       //print(e);
 //Catch your error here
     }
+    progressString = "";
+    update();
   }
 
   Future<bool> isUptoDate() async {
@@ -518,5 +670,11 @@ class JobController extends GetxController {
         return false;
     } else
       return false;
+  }
+
+  dirCreate() async {
+    var directory = await getApplicationDocumentsDirectory();
+    if (!await await Directory(directory.path + "/.arsiv").exists()) ;
+    Directory(directory.path + "/.arsiv").create();
   }
 }

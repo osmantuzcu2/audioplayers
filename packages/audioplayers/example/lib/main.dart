@@ -1,11 +1,11 @@
 import 'package:audioplayers/audioplayers.dart';
-import 'package:audioplayers_example/components/tabs.dart';
-import 'package:audioplayers_example/components/tgl.dart';
-import 'package:audioplayers_example/tabs/audio_context.dart';
-import 'package:audioplayers_example/tabs/controls.dart';
-import 'package:audioplayers_example/tabs/logger.dart';
-import 'package:audioplayers_example/tabs/sources.dart';
-import 'package:audioplayers_example/tabs/streams.dart';
+import 'package:cloud_media/components/tabs.dart';
+import 'package:cloud_media/components/tgl.dart';
+import 'package:cloud_media/tabs/audio_context.dart';
+import 'package:cloud_media/tabs/controls.dart';
+import 'package:cloud_media/tabs/logger.dart';
+import 'package:cloud_media/tabs/sources.dart';
+import 'package:cloud_media/tabs/streams.dart';
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -28,8 +28,18 @@ class ExampleApp extends GetView<JobController> {
         /*   appBar: AppBar(
         title: const Text('audioplayers example'),
       ), */
-        body: StreamsTab(
-      player: controller.player,
+        body: Stack(
+      children: [
+        StreamsTab(
+          player: controller.player,
+        ),
+        controller.isLoading
+            ? Center(
+                child: Container(
+                    width: 50, height: 50, child: CircularProgressIndicator()),
+              )
+            : Container()
+      ],
     ) /* Column(
         children: [
           Expanded(

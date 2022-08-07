@@ -1,4 +1,4 @@
-import 'package:audioplayers_example/tabs/controllers/testController.dart';
+import 'package:cloud_media/tabs/controllers/testController.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

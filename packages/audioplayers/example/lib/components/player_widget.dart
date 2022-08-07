@@ -1,6 +1,6 @@
 // ignore_for_file: unnecessary_null_comparison
 
-import 'package:audioplayers_example/tabs/controllers/jobController.dart';
+import 'package:cloud_media/tabs/controllers/jobController.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
@@ -29,16 +29,16 @@ class PlayerWidget extends StatelessWidget {
                               : Icon(Icons.wifi_off),
                         ),
                       ),
-                      /* InkWell(
+                      InkWell(
                         onTap: () async {
-                          print(await controller.isUptoDate());
+                          controller.getXCampaigns();
                         },
                         child: Container(
                           width: 50,
                           height: 50,
                           child: Icon(Icons.textsms_sharp),
                         ),
-                      ), */
+                      ),
                       controller.downloading
                           ? Container(
                               width: 50,
@@ -61,6 +61,9 @@ class PlayerWidget extends StatelessWidget {
                                 child: Icon(Icons.download),
                               ),
                             ),
+                      controller.progressString == null
+                          ? Text("")
+                          : Text(controller.progressString!)
                     ],
                   ),
                   Column(
@@ -287,12 +290,13 @@ class PlayerWidget extends StatelessWidget {
                         ],
                       ),
                       Text(
-                        controller.positions[controller.selectedPlayerIdx!] !=
+                        controller.positions[
+                                    controller.selectedPlayerIdx ?? 0] !=
                                 null
                             ? controller.positionText.toString() +
                                 '/' +
-                                controller
-                                    .durations[controller.selectedPlayerIdx!]
+                                controller.durations[
+                                        controller.selectedPlayerIdx ?? 0]
                                     .toString()
                                     .split('.')
                                     .first
@@ -305,7 +309,7 @@ class PlayerWidget extends StatelessWidget {
                       ),
                       Text('State: Selected state ' +
                           controller.getselectedPlayerIdx +
-                          controller.pss[controller.selectedPlayerIdx!]
+                          controller.pss[controller.selectedPlayerIdx ?? 0]
                               .toString()),
                       Text('Active Player Id:' +
                           controller.getselectedPlayerIdx),

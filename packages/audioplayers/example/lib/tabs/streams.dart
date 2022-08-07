@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:audioplayers_example/components/btn.dart';
-import 'package:audioplayers_example/components/pad.dart';
-import 'package:audioplayers_example/components/player_widget.dart';
-import 'package:audioplayers_example/components/tab_wrapper.dart';
-import 'package:audioplayers_example/utils.dart';
+import 'package:cloud_media/components/btn.dart';
+import 'package:cloud_media/components/pad.dart';
+import 'package:cloud_media/components/player_widget.dart';
+import 'package:cloud_media/components/tab_wrapper.dart';
+import 'package:cloud_media/utils.dart';
 import 'package:flutter/material.dart';
 
 class StreamsTab extends StatefulWidget {
@@ -35,8 +35,8 @@ class _StreamsTabState extends State<StreamsTab>
           .listen((it) => setState(() => state = it)),
       widget.player.onPositionChanged
           .listen((it) => setState(() => streamPosition = it)),
-      widget.player.onPlayerComplete.listen((it) => toast('Player complete!')),
-      widget.player.onSeekComplete.listen((it) => toast('Seek complete!')),
+      /*  widget.player.onPlayerComplete.listen((it) => toast('Player complete!')),
+      widget.player.onSeekComplete.listen((it) => toast('Seek complete!')), */
     ];
   }
 
